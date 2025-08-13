@@ -117,12 +117,9 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
 
     const lines = recipientsFileContent.trim().split('\n');
     const headerLine = lines.shift() || '';
-    const header = headerLine.split(',').map(h => h.trim().replace(/"/g, ''));
+    const header = headerLine.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(h => h.trim().replace(/"/g, ''));
     
-    // Normalize headers to be valid variable names
-    const normalizedHeader = header.map(h => h.replace(/[^a-zA-Z0-9_]/g, ''));
-    
-    const emailIndex = header.map(h => h.toLowerCase()).indexOf('email');
+    const emailIndex = header.findIndex(h => h.toLowerCase() === 'email');
 
     if (emailIndex === -1) {
       return { success: false, message: `The recipient file must contain an "email" column. Please check your file.` };
@@ -135,7 +132,7 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
       
       if (!email) return;
 
-      const recipientData = normalizedHeader.reduce((acc, currentHeader, index) => {
+      const recipientData = header.reduce((acc, currentHeader, index) => {
           acc[currentHeader] = values[index];
           return acc;
       }, {} as Record<string, string>);
