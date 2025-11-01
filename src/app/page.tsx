@@ -7,7 +7,7 @@ export default function Home() {
       <div className="w-full max-w-2xl relative">
         <div className="bg-gradient-to-br from-primary to-accent p-8 rounded-t-3xl text-center">
             <div className="inline-flex items-center justify-center bg-white/20 text-primary-foreground rounded-full w-20 h-20 mb-4 p-2">
-                <Image src="/rclogo.png" alt="Researcher Connect Logo" width={64} height={64} />
+                <Image src="/rclogo.png" alt="Researcher Connect Logo" width={64} height={64} className="rounded-full" />
             </div>
             <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary-foreground">
                 Researcher Connect
