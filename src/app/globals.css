@@ -14,19 +14,19 @@ body {
     --card-foreground: 219 51% 17%;
     --popover: 0 0% 100%;
     --popover-foreground: 219 51% 17%;
-    --primary: 221 83% 53%; /* #3b82f6 */
+    --primary: 219 51% 17%; /* #152640 */
     --primary-foreground: 0 0% 100%;
     --secondary: 220 13% 91%;
     --secondary-foreground: 219 51% 17%;
     --muted: 220 14.3% 95.9%;
     --muted-foreground: 220 8.9% 43.1%;
-    --accent: 221 83% 53%; /* Use primary blue as accent */
+    --accent: 219 51% 17%; /* Use primary dark blue as accent */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 221 83% 53%;
+    --ring: 219 51% 17%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
