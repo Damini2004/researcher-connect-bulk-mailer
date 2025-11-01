@@ -66,7 +66,7 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
     const personalizedSubject = subjectTemplate(recipientData);
     
     const mailOptions: nodemailer.SendMailOptions = {
-      from: `Pure Research Insights <${process.env.EMAIL_USER}>`,
+      from: `Researcher Connect <${process.env.EMAIL_USER}>`,
       to: email,
       subject: personalizedSubject,
       html: personalizedMessage,
@@ -132,24 +132,18 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
       
       if (!email) return;
 
-      const recipientData = header.reduce((acc, currentHeader, index) => {
-          // Normalize header: remove spaces and convert to lowercase for the key
-          const key = currentHeader.replace(/\s+/g, '').toLowerCase();
-          // Keep original header for handlebars template if needed, but standardize on `Lastname`
-          if (key === 'lastname') {
-            acc['Lastname'] = values[index];
-          } else {
-            acc[currentHeader] = values[index];
-          }
-          return acc;
-      }, {} as Record<string, string>);
+      const recipientData: Record<string, string> = {};
+      header.forEach((currentHeader, index) => {
+          recipientData[currentHeader] = values[index];
+      });
 
-      // Ensure Lastname is available even if the header was different
-      if (!recipientData.Lastname) {
-          const lastNameHeader = header.find(h => h.replace(/\s+/g, '').toLowerCase() === 'lastname');
-          if(lastNameHeader && recipientData[lastNameHeader]) {
-            recipientData.Lastname = recipientData[lastNameHeader];
-          }
+
+      // Normalize Lastname: find the last name column regardless of case/spacing
+      const lastNameHeader = header.find(h => h.replace(/\s/g, '').toLowerCase() === 'lastname');
+      if (lastNameHeader && recipientData[lastNameHeader]) {
+        recipientData.Lastname = recipientData[lastNameHeader];
+      } else {
+        recipientData.Lastname = ''; // fallback
       }
 
 
@@ -157,7 +151,7 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
       const personalizedSubject = subjectTemplate(recipientData);
       
       const mailOptions: nodemailer.SendMailOptions = {
-        from: `Pure Research Insights <${process.env.EMAIL_USER}>`,
+        from: `Researcher Connect <${process.env.EMAIL_USER}>`,
         to: email,
         subject: personalizedSubject,
         html: personalizedMessage,
