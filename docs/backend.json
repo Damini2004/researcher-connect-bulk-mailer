@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "EmailLog": {
+      "title": "Email Log",
+      "description": "Represents a log entry for an email that has been sent.",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "The status of the email (e.g., 'Sent', 'Failed').",
+          "enum": ["Sent", "Failed"]
+        },
+        "recipient": {
+          "type": "string",
+          "description": "The email address of the recipient."
+        },
+        "subject": {
+          "type": "string",
+          "description": "The subject of the email."
+        },
+        "error": {
+          "type": "string",
+          "description": "The error message if the email failed to send."
+        },
+        "sentAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the email was sent."
+        }
+      },
+      "required": ["status", "recipient", "subject", "sentAt"]
+    }
+  },
+  "auth": {
+    "providers": []
+  },
+  "firestore": {
+    "/email-logs/{logId}": {
+      "schema": {
+        "$ref": "#/backend/entities/EmailLog"
+      },
+      "description": "Stores logs of all emails sent from the application."
+    }
+  }
+}

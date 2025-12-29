@@ -4,6 +4,7 @@
 import { z } from 'zod';
 import nodemailer from 'nodemailer';
 import Handlebars from 'handlebars';
+import { logEmailActivity } from './logger';
 
 const sendEmailsActionSchema = z.object({
   subject: z.string(),
@@ -28,8 +29,10 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
   const validation = sendEmailsActionSchema.safeParse(data);
 
   if (!validation.success) {
+    const errorMessage = 'Invalid data provided.';
     console.error('Invalid data provided:', validation.error.flatten());
-    return { success: false, message: 'Invalid data provided.' };
+    await logEmailActivity({ status: 'Failed', recipient: 'N/A', subject: data.subject, error: errorMessage });
+    return { success: false, message: errorMessage };
   }
   
   const { subject, recipientsFileContent, singleRecipient, attachment, banner } = validation.data;
@@ -38,7 +41,9 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
 
 
   if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
-    return { success: false, message: 'Email credentials are not configured on the server.' };
+    const errorMessage = 'Email credentials are not configured on the server.';
+     await logEmailActivity({ status: 'Failed', recipient: 'N/A', subject: subject, error: errorMessage });
+    return { success: false, message: errorMessage };
   }
 
   const transporter = nodemailer.createTransport({
@@ -47,14 +52,13 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_APP_PASSWORD,
     },
-    pool: true, // Use a connection pool for better performance
+    pool: true, 
     maxConnections: 5,
     maxMessages: 100,
     rateDelta: 1000,
-    rateLimit: 30, // Limit to 30 emails per second to be safe
+    rateLimit: 30, 
   });
   
-  // Pre-compile handlebars templates for performance
   const messageTemplate = Handlebars.compile(fullMessage, { noEscape: true });
   const subjectTemplate = Handlebars.compile(subject, { noEscape: true });
 
@@ -101,10 +105,13 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
     try {
       await transporter.sendMail(mailOptions);
       transporter.close();
+      await logEmailActivity({ status: 'Sent', recipient: email, subject: personalizedSubject });
       return { success: true, message: `Email successfully sent to ${email}.` };
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Failed to send email to ${email}:`, error);
       transporter.close();
+      const errorMessage = error.message || 'Failed to send email.';
+      await logEmailActivity({ status: 'Failed', recipient: email, subject: personalizedSubject, error: errorMessage });
       return { success: false, message: 'Failed to send email. Please check server logs for details.' };
     }
   }
@@ -112,7 +119,9 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
 
   try {
     if (!recipientsFileContent) {
-      return { success: false, message: 'No recipient file provided for bulk send.' };
+      const errorMessage = 'No recipient file provided for bulk send.';
+      await logEmailActivity({ status: 'Failed', recipient: 'N/A', subject: subject, error: errorMessage });
+      return { success: false, message: errorMessage };
     }
 
     const lines = recipientsFileContent.trim().split('\n');
@@ -122,9 +131,13 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
     const emailIndex = header.findIndex(h => h.toLowerCase() === 'email');
 
     if (emailIndex === -1) {
-      return { success: false, message: `The recipient file must contain an "email" column. Please check your file.` };
+       const errorMessage = `The recipient file must contain an "email" column. Please check your file.`;
+       await logEmailActivity({ status: 'Failed', recipient: 'N/A', subject: subject, error: errorMessage });
+      return { success: false, message: errorMessage };
     }
     
+    const lastNameHeader = header.find(h => h.replace(/\s/g, '').toLowerCase() === 'lastname');
+
     let sentCount = 0;
     const emailPromises = lines.map(async (line) => {
       const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/"/g, ''));
@@ -137,15 +150,11 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
           recipientData[currentHeader] = values[index];
       });
 
-
-      // Normalize Lastname: find the last name column regardless of case/spacing
-      const lastNameHeader = header.find(h => h.replace(/\s/g, '').toLowerCase() === 'lastname');
       if (lastNameHeader && recipientData[lastNameHeader]) {
         recipientData.Lastname = recipientData[lastNameHeader];
       } else {
-        recipientData.Lastname = ''; // fallback
+        recipientData.Lastname = ''; 
       }
-
 
       const personalizedMessage = messageTemplate(recipientData);
       const personalizedSubject = subjectTemplate(recipientData);
@@ -162,7 +171,6 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
 
       if (banner) {
           const bannerCid = 'banner-image@mailmerge.pro';
-          // Append banner to the end of the HTML message
           mailOptions.html += `
             <br>
             <div style="text-align: center;">
@@ -187,9 +195,11 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
       try {
         await transporter.sendMail(mailOptions);
         sentCount++;
-      } catch (error) {
+        await logEmailActivity({ status: 'Sent', recipient: email, subject: personalizedSubject });
+      } catch (error: any) {
         console.error(`Failed to send email to ${email}:`, error);
-        // Don't re-throw, so one failure doesn't stop the whole batch
+        const errorMessage = error.message || 'Failed to send email.';
+        await logEmailActivity({ status: 'Failed', recipient: email, subject: personalizedSubject, error: errorMessage });
       }
     });
 
@@ -197,15 +207,19 @@ export async function sendEmailsAction(data: z.infer<typeof sendEmailsActionSche
     transporter.close();
 
     if (sentCount === 0 && lines.length > 0) {
-        return { success: false, message: 'No emails were sent. Please check your contact list and server logs.' };
+        const errorMessage = 'No emails were sent. Please check your contact list and server logs.';
+        await logEmailActivity({ status: 'Failed', recipient: 'Bulk Send Job', subject: subject, error: errorMessage });
+        return { success: false, message: errorMessage };
     }
 
     const messageText = `Your email blast has been successfully sent to ${sentCount} of ${lines.length} recipients.`;
 
     return { success: true, message: messageText };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending emails:', error);
     transporter.close();
+    const errorMessage = error.message || 'An error occurred during the bulk send operation.';
+    await logEmailActivity({ status: 'Failed', recipient: 'Bulk Send Job', subject: subject, error: errorMessage });
     return { success: false, message: 'Failed to send emails. Please check server logs for details.' };
   }
 }

@@ -1,11 +1,22 @@
 
 import MailForm from "@/components/MailForm";
 import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { BookText } from "lucide-react";
 
 export default function Home() {
   return (
     <main className="min-h-screen w-full flex flex-col items-center bg-background p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-2xl relative">
+        <div className="absolute top-4 right-4 z-10">
+            <Link href="/logs">
+                <Button variant="outline" size="icon" className="bg-white text-primary hover:bg-gray-100 border-border rounded-full">
+                    <BookText className="h-6 w-6" />
+                    <span className="sr-only">View Logs</span>
+                </Button>
+            </Link>
+        </div>
         <div className="bg-gradient-to-br from-primary to-accent p-8 rounded-t-3xl text-center">
             <div className="inline-flex items-center justify-center bg-white/20 text-primary-foreground rounded-full w-24 h-24 mb-4 p-2">
                 <Image src="/rclogo.png" alt="Researcher Connect Logo" width={80} height={80} className="rounded-full" />
